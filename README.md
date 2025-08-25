@@ -4,21 +4,16 @@ A collection of integration demos and tools for AWS Bedrock Agent Core Gateway, 
 
 ## 🎯 Project Overview
 
-This repository demonstrates how to build secure, enterprise-grade integrations with AWS Bedrock Agent Core Gateway. The current focus is on OAuth 2.0 authentication flows and Microsoft SharePoint integration, providing a foundation for AI agents to access enterprise data securely.
+This repository demonstrates how to build secure, enterprise-grade integrations with AWS Bedrock Agent Core Gateway. The focus is on OAuth 2.0 flows with auth providers like Microsoft which are used to connect to commonly used data sources such as sharepoint, thus providing a foundation for AI agents to access enterprise data securely.
 
-## 🏗️ Architecture
+## 🏗️ Architecture for Microsoft services
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
-│   Bedrock       │    │   AgentCore      │    │   OAuth 2.0     │    │   Microsoft      │
-│   Agent         │◄──►│   Gateway        │◄──►│   Client        │◄──►│   Graph API      │
+│   Bedrock       │    │   AgentCore      │    │   Microsoft     │    │   Microsoft      │
+│   Agent         │◄──►│   Gateway        │◄──►│   Graph API     │◄──►│   Services       │
 └─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
-                                                         │                        │
-                                                         ▼                        ▼
-                                               ┌─────────────────┐    ┌──────────────────┐
-                                               │   OAuth Tester  │    │   SharePoint     │
-                                               │   CLI Tool      │    │   Sites & Data   │
-                                               └─────────────────┘    └──────────────────┘
+                                           
 ```
 
 ## 🚀 What's Included
@@ -29,7 +24,7 @@ A comprehensive CLI tool for testing and debugging OAuth 2.0 flows:
 - **Multi-flow support**: Authorization Code, Client Credentials, Device Flow
 - **Provider discovery**: Automatic capability detection
 - **JWT token analysis**: Decode and inspect tokens
-- **Microsoft Graph integration**: Specialized for SharePoint access
+- **Microsoft Graph integration**: Specialized for testing integrations with Microsoft services
 - **Verbose debugging**: Detailed error diagnostics
 
 ### 2. SharePoint API Client (`sharepoint/`)
@@ -67,52 +62,37 @@ agentcore-gateway-demos/
     ├── sharepoint_client.py       # SharePoint Graph API client
     └── README.md
 ```
+ 
 
-## 🔧 Key Technical Achievements
 
-### OAuth 2.0 Implementation
-- **Client Credentials Flow**: Server-to-server authentication
-- **PKCE Support**: Secure public client authentication
-- **Token Analysis**: JWT decoding without verification
-- **Error Handling**: Comprehensive diagnostics
-
-### Microsoft Graph Integration
-- **Application Permissions**: `Sites.Read.All` with admin consent
-- **Tenant-specific endpoints**: Azure AD v2.0 endpoints
-- **Scope management**: `.default` scope for application permissions
-- **Token validation**: Proper audience and claims verification
-
-### Enterprise Security
-- **Admin consent workflow**: Proper permission delegation
-- **Token expiration handling**: 1-hour token lifecycle
-- **Secure credential management**: Client secret protection
-- **Permission validation**: Role-based access control
-
-## 🚀 Quick Start
+## 🚀 Quick Start for Microsoft Sharepoint
 
 ### Prerequisites
 - Azure tenant with admin access
-- Python 3.8+
+- Python 3.12+
 - AWS Bedrock Agent Core Gateway
 
 ### 1. Azure App Registration Setup
-1. Create app registration in Azure Portal
-2. Configure API permissions: **Microsoft Graph** > **Application** > **Sites.Read.All**
-3. Grant admin consent
-4. Create client secret
-5. Note tenant ID, client ID, and client secret
+1. Create app registration in Microsoft Entra Admin Center. Enter a friendly name and select 'Accounts in this organizational directory only' in 'Supported account types'
 
-### 2. Test OAuth Flow
+![Register app](register_app.png)
+
+2. Configure API permissions: **Microsoft Graph** >  **Sites.Read.All**
+
+![Grant permissions](add_permissions.png)
+
+3. Note client ID, and client secret from step 1.
+
+4. Note the tentant ID from the 'Home' section of the Microsoft Entra admin center
+
+![Find tenant ID](find_tentant_id.png)
+
+
+### 2. Test OAuth Flow for Microsoft (optional)
 ```bash
 cd oauth-tester
 pip install -r requirements.txt
 
-# Discover what your app supports
-python oauth_tester.py discover \
-  --provider microsoft \
-  --tenant-id <your-tenant-id> \
-  --client-id <your-client-id> \
-  --client-secret <your-client-secret>
 
 # Test Client Credentials flow
 python oauth_tester.py client-credentials \
@@ -121,8 +101,10 @@ python oauth_tester.py client-credentials \
   --client-id <your-client-id> \
   --client-secret <your-client-secret>
 ```
+Refer [README.md](oauth-tester/README.md) for more details
 
-### 3. Access SharePoint
+
+### 3. Test Sharepoint access (optional)
 ```bash
 cd sharepoint
 
@@ -133,27 +115,87 @@ python sharepoint_client.py --token <access-token> --action test-token
 python sharepoint_client.py --token <access-token> --action list-sites
 ```
 
+Refer [README.md](sharepoint/README.md) for more details
+
+
 ### 4. Integrate with Bedrock Agent Core
-- Configure OAuth client in AgentCore Identity
-- Set up SharePoint MCP server
-- Test with MCP Inspector
+- Configure OAuth client in AgentCore Identity as a OAuth client
 
-## 🎯 Use Cases Enabled
+![OAuth client](sharepoint/oauth_client_setup.png)
 
-### Document Intelligence
-- AI agents can read SharePoint documents
-- Automated content analysis and summarization
-- Intelligent document classification
+- Set up SharePoint as a target in Agent Core Gateway. Not sure how to create a Agent Core gateway? Refer [Creating your Gateway](!https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/create-gateway-methods.html)
 
-### Knowledge Management
-- AI-powered search across SharePoint sites
-- Automated knowledge base updates
-- Content recommendation systems
+![Add target for sharepoint](sharepoint/add_target_sharepoint.png)
 
-### Workflow Automation
-- AI-driven approval processes
-- Automated document routing
-- Intelligent task assignment
+
+### 5. Obtain Cognito access token for inbound auth
+First we need to obtain an access token for inbound auth (i.e. authenticating the request from MCP INspector at the Agent Core Gateway) 
+
+- In the Agent Core gateway console page, open the discovery URL and note the token endpoint. It would be in the below format:
+
+```
+    https://xxxxxxxxxxxx.auth.ap-southeast-2.amazoncognito.com/oauth2/token
+
+```
+
+- In the same discovery URL note the Cognito user pool ID that is being used to authenticate inbound requests by Agent Core Gateway.
+
+![Find the user pool ID](find_user_pool_id.png)
+
+- Navigate to Cognito and find the user pool with the same user pool id
+
+![Navigate to Cognito user pool](find_user_pool.png)
+
+- Note the client id and client secret from the 'App Clients' section of the user pool. This will be used to obtain the access token for inbound auth.
+
+![Obtain client credentials](cognito_client_credentials.png)
+
+- Run the below curl command to obtain the access token. This will be needed for the next step.
+
+```
+
+curl --http1.1 -X POST YOUR_TOKEN_ENDPOINT   -H "Content-Type: application/x-www-form-urlencoded"   -d "grant_type=client_credentials&client_id=YOUR_CLEINT_ID&client_secret=YOUR_CLIENT_SECRET"
+
+```
+
+### 6. Test in MCP inspector
+
+- Install and start MCP inspector by running the command below:
+
+```
+
+npx @modelcontextprotocol/inspector
+
+```
+
+Refer [Using the MCP Inspector](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-using-inspector.html) for more information
+
+Once the MCP server is running, it will open up a web page automatically. 
+
+- Select Transport type as 'Streamable HTTP', URL as the Gateway resource URL in AgentCore gateway.
+- Enter the access token obtained in previous step under 'Bearer Token'
+- Click 'Connect'
+- Click 'List Tools' and it should list sharepoint related tools like addSheet, getSite etc.
+
+![MCP Inspector](mcp_inspector.png)
+
+- Let us try to get site details. For this, you need to lookup the sharepoint siteId which is of the form <domain>,<guid>,<guid>
+- Simply run the list-sites command to obtain the sharepoint site ID
+
+```bash
+cd sharepoint
+
+# List SharePoint sites
+python sharepoint_client.py --token <access-token> --action list-sites
+```
+- Run the tool and it will return the site information
+
+![List sites](list_sites.png)
+
+
+
+
+
 
 ## 🔍 Key Learnings & Troubleshooting
 
@@ -173,38 +215,5 @@ python sharepoint_client.py --token <access-token> --action list-sites
 - Use `--verbose` flag for detailed debugging
 - Token validation helps identify permission issues
 
-## 🔮 Future Enhancements
 
-### Planned Features
-- **Device Flow implementation**: For headless server scenarios
-- **Token refresh handling**: Automatic token renewal
-- **Multi-tenant support**: Cross-organization access
-- **Additional providers**: Google Drive, Dropbox integration
-- **Batch operations**: Bulk SharePoint operations
 
-### Potential Integrations
-- **Meeting intelligence**: AI analysis of SharePoint-stored recordings
-- **Compliance automation**: Automated document compliance checking
-- **Content migration**: AI-assisted content organization
-- **Security analysis**: Automated permission auditing
-
-## 🤝 Contributing
-
-This project demonstrates enterprise integration patterns and can be extended for:
-- Additional OAuth providers
-- Different Microsoft Graph APIs
-- Alternative AI platforms
-- Custom authentication flows
-
-## 📚 References
-
-- [OAuth 2.0 RFC 6749](https://tools.ietf.org/html/rfc6749)
-- [Microsoft Graph API Documentation](https://docs.microsoft.com/en-us/graph/)
-- [AWS Bedrock Agent Core](https://docs.aws.amazon.com/bedrock/)
-- [PKCE RFC 7636](https://tools.ietf.org/html/rfc7636)
-
----
-
-**Built with**: Python, OAuth 2.0, Microsoft Graph API, AWS Bedrock Agent Core
-
-**Tags**: #OAuth2 #SharePoint #AWS #Bedrock #AI #Integration #Enterprise #Security
