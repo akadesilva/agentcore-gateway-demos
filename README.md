@@ -75,17 +75,17 @@ agentcore-gateway-demos/
 ### 1. Azure App Registration Setup
 1. Create app registration in Microsoft Entra Admin Center. Enter a friendly name and select 'Accounts in this organizational directory only' in 'Supported account types'
 
-![Register app](register_app.png)
+![Register app](sharepoint/register_app.png)
 
 2. Configure API permissions: **Microsoft Graph** >  **Sites.Read.All**
 
-![Grant permissions](add_permissions.png)
+![Grant permissions](sharepoint/add_permissions.png)
 
 3. Note client ID, and client secret from step 1.
 
 4. Note the tentant ID from the 'Home' section of the Microsoft Entra admin center
 
-![Find tenant ID](find_tentant_id.png)
+![Find tenant ID](sharepoint/find_tentant_id.png)
 
 
 ### 2. Test OAuth Flow for Microsoft (optional)
