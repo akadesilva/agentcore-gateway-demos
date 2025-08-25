@@ -1,161 +1,159 @@
 # AgentCore Gateway Demos
 
-A collection of integration demos and tools for AWS Bedrock Agent Core Gateway, featuring OAuth 2.0 flows, SharePoint integration, and enterprise authentication patterns.
+Connect AWS Bedrock Agent Core Gateway to Microsoft services using OAuth 2.0. Get AI agents reading SharePoint data in minutes.
 
-## 🎯 Project Overview
+## 🎯 What This Does
 
-This repository demonstrates how to build secure, enterprise-grade integrations with AWS Bedrock Agent Core Gateway. The focus is on OAuth 2.0 flows with auth providers like Microsoft which are used to connect to commonly used data sources such as sharepoint, thus providing a foundation for AI agents to access enterprise data securely.
+Enables secure integration between AWS Bedrock agents and Microsoft services:
+- **OAuth 2.0 authentication** with Microsoft Graph API
+- **SharePoint access** for AI agents via Agent Core Gateway
+- **Complete testing toolkit** with debugging tools
+- **Step-by-step setup** with visual guides
 
-
-## 🚀 Quick Start for Microsoft Sharepoint
+## 🚀 Quick Start: SharePoint Integration
 
 ### Prerequisites
 - Azure tenant with admin access
 - Python 3.12+
 - AWS Bedrock Agent Core Gateway
 
-### 1. Azure App Registration Setup
-1. Create app registration in Microsoft Entra Admin Center. Enter a friendly name and select 'Accounts in this organizational directory only' in 'Supported account types'
+### Step 1: Register Azure Application
+
+1. **Create app registration** in Microsoft Entra Admin Center
+   - Name: Choose any friendly name
+   - Account types: "Accounts in this organizational directory only"
 
 ![Register app](sharepoint/register_app.png)
 
-2. Configure API permissions: **Microsoft Graph** >  **Sites.Read.All**
+2. **Add API permissions**: Microsoft Graph → Application permissions → **Sites.Read.All**
 
 ![Grant permissions](sharepoint/add_permissions.png)
 
-3. Note client ID, and client secret from step 1.
+3. **Grant admin consent** for the permission
 
-4. Note the tentant ID from the 'Home' section of the Microsoft Entra admin center
+4. **Create client secret** and note:
+   - Client ID
+   - Client Secret  
+   - Tenant ID (from Entra admin center Home)
 
-![Find tenant ID](sharepoint/find_tentant_id.png)
+![Find tenant ID](sharepoint/find_tenant_id.png)
 
+### Step 2: Test OAuth Flow (Optional)
 
-### 2. Test OAuth Flow for Microsoft (optional)
+Verify your Azure setup works:
+
 ```bash
 cd oauth-tester
 pip install -r requirements.txt
 
-
-# Test Client Credentials flow
 python oauth_tester.py client-credentials \
   --provider microsoft \
   --tenant-id <your-tenant-id> \
   --client-id <your-client-id> \
   --client-secret <your-client-secret>
 ```
-Refer [README.md](oauth-tester/README.md) for more details
 
+**Expected result**: Access token with `"roles": ["Sites.Read.All"]`
 
-### 3. Test Sharepoint access (optional)
+### Step 3: Test SharePoint Access (Optional)
+
 ```bash
 cd sharepoint
 
-# Test your token
+# Verify token works
 python sharepoint_client.py --token <access-token> --action test-token
 
-# List SharePoint sites
+# List your SharePoint sites  
 python sharepoint_client.py --token <access-token> --action list-sites
 ```
 
-Refer [README.md](sharepoint/README.md) for more details
+### Step 4: Configure Agent Core Gateway
 
-
-### 4. Integrate with Bedrock Agent Core
-- Configure OAuth client in AgentCore Identity as a OAuth client
+1. **Add OAuth client** in AgentCore Identity with your Azure credentials:
 
 ![OAuth client](sharepoint/oauth_client_setup.png)
 
-- Set up SharePoint as a target in Agent Core Gateway. Not sure how to create a Agent Core gateway? Refer [Creating your Gateway](!https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/create-gateway-methods.html)
+2. **Add SharePoint target** in Agent Core Gateway:
 
 ![Add target for sharepoint](sharepoint/add_target_sharepoint.png)
 
+> **Need help creating a gateway?** See [Creating your Gateway](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/create-gateway-methods.html)
 
-### 5. Obtain Cognito access token for inbound auth
-First we need to obtain an access token for inbound auth (i.e. authenticating the request from MCP INspector at the Agent Core Gateway) 
+### Step 5: Get Cognito Access Token
 
-- In the Agent Core gateway console page, open the discovery URL and note the token endpoint. It would be in the below format:
+Agent Core Gateway uses Cognito for inbound authentication. Get the token:
 
-```
-    https://xxxxxxxxxxxx.auth.ap-southeast-2.amazoncognito.com/oauth2/token
+1. **Find token endpoint** from your gateway's discovery URL:
+   ```
+   https://xxxxxxxxxxxx.auth.ap-southeast-2.amazoncognito.com/oauth2/token
+   ```
 
-```
-
-- In the same discovery URL note the Cognito user pool ID that is being used to authenticate inbound requests by Agent Core Gateway.
+2. **Find Cognito user pool ID** from the same discovery URL:
 
 ![Find the user pool ID](find_user_pool_id.png)
 
-- Navigate to Cognito and find the user pool with the same user pool id
+3. **Navigate to Cognito** and find your user pool:
 
 ![Navigate to Cognito user pool](find_user_pool.png)
 
-- Note the client id and client secret from the 'App Clients' section of the user pool. This will be used to obtain the access token for inbound auth.
+4. **Get client credentials** from App Clients section:
 
 ![Obtain client credentials](cognito_client_credentials.png)
 
-- Run the below curl command to obtain the access token. This will be needed for the next step.
+5. **Request access token**:
+   ```bash
+   curl -X POST YOUR_TOKEN_ENDPOINT \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET"
+   ```
 
-```
+### Step 6: Test with MCP Inspector
 
-curl --http1.1 -X POST YOUR_TOKEN_ENDPOINT   -H "Content-Type: application/x-www-form-urlencoded"   -d "grant_type=client_credentials&client_id=YOUR_CLEINT_ID&client_secret=YOUR_CLIENT_SECRET"
+1. **Start MCP Inspector**:
+   ```bash
+   npx @modelcontextprotocol/inspector
+   ```
 
-```
+2. **Connect to your gateway**:
+   - Transport: "Streamable HTTP"
+   - URL: Your Gateway resource URL
+   - Bearer Token: Cognito access token from Step 5
 
-### 6. Test in MCP inspector
-
-- Install and start MCP inspector by running the command below:
-
-```
-
-npx @modelcontextprotocol/inspector
-
-```
-
-Refer [Using the MCP Inspector](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-using-inspector.html) for more information
-
-Once the MCP server is running, it will open up a web page automatically. 
-
-- Select Transport type as 'Streamable HTTP', URL as the Gateway resource URL in AgentCore gateway.
-- Enter the access token obtained in previous step under 'Bearer Token'
-- Click 'Connect'
-- Click 'List Tools' and it should list sharepoint related tools like addSheet, getSite etc.
+3. **Test SharePoint tools**:
+   - Click "List Tools" → Should show `getSite`, `addSheet`, etc.
+   - Get site ID from SharePoint client: `python sharepoint_client.py --token <token> --action list-sites`
+   - Test `getSite` with your site ID
 
 ![MCP Inspector](mcp_inspector.png)
 
-- Let us try to get site details. For this, you need to lookup the sharepoint siteId which is of the form <domain>,<guid>,<guid>
-- Simply run the list-sites command to obtain the sharepoint site ID
-
-```bash
-cd sharepoint
-
-# List SharePoint sites
-python sharepoint_client.py --token <access-token> --action list-sites
-```
-- Run the tool and it will return the site information
+**Success!** Your AI agents can now access SharePoint data:
 
 ![List sites](list_sites.png)
 
+## 🔧 Troubleshooting
 
+### OAuth Issues
+| Problem | Solution |
+|---------|----------|
+| "Permission denied" | Use **Microsoft Graph** permissions, not SharePoint API |
+| "Invalid scope" | Use `.default` scope for Client Credentials |
+| "Unauthorized" | Ensure admin consent is granted |
+| "No roles in token" | Wait 5-10 minutes after granting consent |
 
+### Quick Diagnostics
+- **Check JWT token**: Look for `"roles": ["Sites.Read.All"]` field
+- **Use verbose mode**: Add `--verbose` flag to commands
+- **Verify permissions**: Check Azure portal for green checkmarks
 
+## 📁 What's Included
 
+```
+├── oauth-tester/           # OAuth 2.0 testing toolkit
+├── sharepoint/            # SharePoint API client  
+└── oauth-cheatsheet.md    # OAuth flows reference
+```
 
-## 🔍 Key Learnings & Troubleshooting
-
-### Common OAuth Issues
-1. **Microsoft Graph vs SharePoint API**: Must use Microsoft Graph permissions, not legacy SharePoint API permissions
-2. **Application vs Delegated**: Client Credentials requires Application permissions with admin consent
-3. **Scope specification**: Use `.default` scope for Client Credentials, not specific permission names
-4. **Token propagation delay**: Admin consent changes can take 5-10 minutes to propagate
-
-### Permission Verification
-- Check `roles` field in JWT for application permissions
-- Verify admin consent status in Azure Portal
-- Use discovery tool to validate configuration
-
-### Error Diagnostics
-- 400/401/403 errors provide specific guidance
-- Use `--verbose` flag for detailed debugging
-- Token validation helps identify permission issues
+Each folder has its own README with detailed usage instructions.
 
 
 
