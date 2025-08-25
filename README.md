@@ -6,64 +6,6 @@ A collection of integration demos and tools for AWS Bedrock Agent Core Gateway, 
 
 This repository demonstrates how to build secure, enterprise-grade integrations with AWS Bedrock Agent Core Gateway. The focus is on OAuth 2.0 flows with auth providers like Microsoft which are used to connect to commonly used data sources such as sharepoint, thus providing a foundation for AI agents to access enterprise data securely.
 
-## 🏗️ Architecture for Microsoft services
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
-│   Bedrock       │    │   AgentCore      │    │   Microsoft     │    │   Microsoft      │
-│   Agent         │◄──►│   Gateway        │◄──►│   Graph API     │◄──►│   Services       │
-└─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
-                                           
-```
-
-## 🚀 What's Included
-
-### 1. OAuth 2.0 Testing Toolkit (`oauth-tester/`)
-A comprehensive CLI tool for testing and debugging OAuth 2.0 flows:
-
-- **Multi-flow support**: Authorization Code, Client Credentials, Device Flow
-- **Provider discovery**: Automatic capability detection
-- **JWT token analysis**: Decode and inspect tokens
-- **Microsoft Graph integration**: Specialized for testing integrations with Microsoft services
-- **Verbose debugging**: Detailed error diagnostics
-
-### 2. SharePoint API Client (`sharepoint/`)
-A Python client for accessing SharePoint via Microsoft Graph:
-
-- **Site enumeration**: List and search SharePoint sites
-- **Token validation**: Test access token validity
-- **Error handling**: Clear diagnostics for permission issues
-- **Microsoft Graph integration**: Modern API approach
-
-### 3. Documentation
-- **OAuth Cheat Sheet**: Comprehensive guide to OAuth 2.0 flows
-- **Setup guides**: Step-by-step configuration instructions
-- **Troubleshooting**: Common issues and solutions
-
-## 📁 Project Structure
-
-```
-agentcore-gateway-demos/
-├── README.md                        # This file
-├── oauth-cheatsheet.md             # Comprehensive OAuth 2.0 reference
-├── oauth-tester/                   # OAuth 2.0 Testing Toolkit
-│   ├── oauth_tester.py            # Main CLI application
-│   ├── providers/
-│   │   ├── microsoft.py           # Microsoft OAuth provider
-│   │   └── base.py                # Base provider class
-│   ├── flows/
-│   │   ├── auth_code.py           # Authorization Code + PKCE
-│   │   └── client_credentials.py  # Client Credentials flow
-│   ├── utils/
-│   │   ├── token_utils.py         # JWT decoding & display
-│   │   └── discovery.py           # OAuth capability discovery
-│   └── README.md
-└── sharepoint/                     # SharePoint API Client
-    ├── sharepoint_client.py       # SharePoint Graph API client
-    └── README.md
-```
- 
-
 
 ## 🚀 Quick Start for Microsoft Sharepoint
 
