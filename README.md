@@ -13,34 +13,35 @@ Enables secure integration between AWS Bedrock agents and Microsoft services:
 ## 🚀 Quick Start: SharePoint Integration
 
 ### Prerequisites
-- Azure tenant with admin access
+- Microsoft Entra tenant with admin access
 - Python 3.12+
 - AWS Bedrock Agent Core Gateway
 
-### Step 1: Register Azure Application
+### Step 1: Register Microsoft Entra Application
 
 1. **Create app registration** in Microsoft Entra Admin Center
    - Name: Choose any friendly name
    - Account types: "Accounts in this organizational directory only"
+   - **Note the Client ID** from the app registration overview
 
 ![Register app](sharepoint/register_app.png)
 
-2. **Add API permissions**: Microsoft Graph → Application permissions → **Sites.Read.All**
+2. **Create client secret** in Certificates & secrets section
+   - **Note the Client Secret** (copy immediately - it won't be shown again)
+
+3. **Add API permissions**: Microsoft Graph → Application permissions → **Sites.Read.All**
 
 ![Grant permissions](sharepoint/add_permissions.png)
 
-3. **Grant admin consent** for the permission
+4. **Grant admin consent** for the permission
 
-4. **Create client secret** and note:
-   - Client ID
-   - Client Secret  
-   - Tenant ID (from Entra admin center Home)
+5. **Get Tenant ID** from the Entra admin center Home section
 
 ![Find tenant ID](sharepoint/find_tenant_id.png)
 
 ### Step 2: Test OAuth Flow (Optional)
 
-Verify your Azure setup works:
+Verify your Entra setup works:
 
 ```bash
 cd oauth-tester
@@ -69,7 +70,7 @@ python sharepoint_client.py --token <access-token> --action list-sites
 
 ### Step 4: Configure Agent Core Gateway
 
-1. **Add OAuth client** in AgentCore Identity with your Azure credentials:
+1. **Add OAuth client** in AgentCore Identity with your Entra credentials:
 
 ![OAuth client](sharepoint/oauth_client_setup.png)
 
