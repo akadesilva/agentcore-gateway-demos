@@ -6,6 +6,7 @@ OAuth Tester - A CLI tool for testing various OAuth 2.0 flows
 import argparse
 import sys
 from providers.microsoft import MicrosoftOAuthProvider
+from providers.salesforce import SalesforceOAuthProvider
 from flows.auth_code import AuthorizationCodeFlow
 from flows.client_credentials import ClientCredentialsFlow
 from utils.discovery import analyze_client_capabilities
@@ -17,20 +18,22 @@ def main():
     
     # Discovery command
     discovery_parser = subparsers.add_parser('discover', help='Discover OAuth capabilities')
-    discovery_parser.add_argument('--provider', required=True, choices=['microsoft'], 
+    discovery_parser.add_argument('--provider', required=True, choices=['microsoft', 'salesforce'], 
                                  help='OAuth provider')
-    discovery_parser.add_argument('--tenant-id', required=True, help='Tenant ID (for Microsoft)')
+    discovery_parser.add_argument('--tenant-id', help='Tenant ID (for Microsoft)')
+    discovery_parser.add_argument('--instance-url', help='Instance URL (for Salesforce, e.g., login.salesforce.com)')
     discovery_parser.add_argument('--client-id', required=True, help='Client ID')
     discovery_parser.add_argument('--client-secret', help='Client Secret (optional)')
     discovery_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     # Authorization Code Flow
     auth_code_parser = subparsers.add_parser('auth-code', help='Authorization Code Flow')
-    auth_code_parser.add_argument('--provider', required=True, choices=['microsoft'], 
+    auth_code_parser.add_argument('--provider', required=True, choices=['microsoft', 'salesforce'], 
                                  help='OAuth provider')
     auth_code_parser.add_argument('--client-id', required=True, help='Client ID')
     auth_code_parser.add_argument('--client-secret', help='Client Secret (optional for PKCE)')
     auth_code_parser.add_argument('--tenant-id', help='Tenant ID (for Microsoft)')
+    auth_code_parser.add_argument('--instance-url', help='Instance URL (for Salesforce)')
     auth_code_parser.add_argument('--scope', required=True, help='OAuth scopes (space-separated)')
     auth_code_parser.add_argument('--redirect-uri', default='http://localhost:8080/callback',
                                  help='Redirect URI')
@@ -39,12 +42,13 @@ def main():
     
     # Client Credentials Flow
     client_creds_parser = subparsers.add_parser('client-credentials', help='Client Credentials Flow')
-    client_creds_parser.add_argument('--provider', required=True, choices=['microsoft'], 
+    client_creds_parser.add_argument('--provider', required=True, choices=['microsoft', 'salesforce'], 
                                     help='OAuth provider')
     client_creds_parser.add_argument('--client-id', required=True, help='Client ID')
     client_creds_parser.add_argument('--client-secret', required=True, help='Client Secret')
-    client_creds_parser.add_argument('--tenant-id', required=True, help='Tenant ID (for Microsoft)')
-    client_creds_parser.add_argument('--scope', help='OAuth scopes (defaults to .default)')
+    client_creds_parser.add_argument('--tenant-id', help='Tenant ID (for Microsoft)')
+    client_creds_parser.add_argument('--instance-url', help='Instance URL (for Salesforce)')
+    client_creds_parser.add_argument('--scope', help='OAuth scopes (defaults to provider default)')
     client_creds_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
@@ -85,6 +89,16 @@ def handle_discovery(args):
             tenant_id=args.tenant_id,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            provider='microsoft',
+            verbose=args.verbose
+        )
+        return 0
+    elif args.provider == 'salesforce':
+        analyze_client_capabilities(
+            client_id=args.client_id,
+            client_secret=args.client_secret,
+            instance_url=args.instance_url,
+            provider='salesforce',
             verbose=args.verbose
         )
         return 0
@@ -102,6 +116,8 @@ def handle_auth_code_flow(args):
             print("Error: --tenant-id is required for Microsoft provider")
             return 1
         provider = MicrosoftOAuthProvider(args.tenant_id)
+    elif args.provider == 'salesforce':
+        provider = SalesforceOAuthProvider(args.instance_url)
     else:
         print(f"Provider '{args.provider}' not supported")
         return 1
@@ -132,7 +148,12 @@ def handle_client_credentials_flow(args):
     
     # Initialize provider
     if args.provider == 'microsoft':
+        if not args.tenant_id:
+            print("Error: --tenant-id is required for Microsoft provider")
+            return 1
         provider = MicrosoftOAuthProvider(args.tenant_id)
+    elif args.provider == 'salesforce':
+        provider = SalesforceOAuthProvider(args.instance_url)
     else:
         print(f"Provider '{args.provider}' not supported")
         return 1
@@ -151,7 +172,7 @@ def handle_client_credentials_flow(args):
         provider=provider,
         client_id=args.client_id,
         client_secret=args.client_secret,
-        scope=scope,
+        #scope=scope,
         verbose=args.verbose
     )
     

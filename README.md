@@ -29,7 +29,7 @@ Enables secure integration between AWS Bedrock agents and enterprise services:
 ## 🔧 Testing Tools
 
 ### OAuth Tester (`/oauth-tester/`)
-Universal OAuth 2.0 testing toolkit:
+Universal OAuth 2.0 testing toolkit supporting **Microsoft** and **Salesforce**:
 - **Authorization Code Flow** with PKCE support
 - **Client Credentials Flow** for app-to-app authentication
 - **OAuth Discovery** to detect supported capabilities
@@ -45,6 +45,12 @@ python oauth_tester.py client-credentials \
   --tenant-id <tenant-id> \
   --client-id <client-id> \
   --client-secret <client-secret>
+
+# Test Salesforce OAuth
+python oauth_tester.py client-credentials \
+  --provider salesforce \
+  --client-id <consumer-key> \
+  --client-secret <consumer-secret>
 ```
 
 ### Service-Specific Clients

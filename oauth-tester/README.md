@@ -8,6 +8,7 @@ A CLI tool for testing various OAuth 2.0 flows with different providers.
 - **Authorization Code Flow** with PKCE support
 - **Client Credentials Flow** for app-to-app authentication
 - **Microsoft Azure AD / Graph** integration
+- **Salesforce** OAuth integration
 - **JWT token decoding** and analysis
 - Support for both **JWT and opaque access tokens**
 - **Verbose debugging** output
@@ -26,33 +27,41 @@ pip install -r requirements.txt
 Before testing OAuth flows, discover what your client supports:
 
 ```bash
-# Basic discovery
+# Microsoft discovery
 python oauth_tester.py discover \
   --provider microsoft \
   --tenant-id your-tenant-id \
   --client-id your-client-id \
   --client-secret your-client-secret
 
-# Verbose discovery with full details
+# Salesforce discovery
 python oauth_tester.py discover \
-  --provider microsoft \
-  --tenant-id your-tenant-id \
+  --provider salesforce \
   --client-id your-client-id \
   --client-secret your-client-secret \
+  --instance-url login.salesforce.com
+
+# Verbose discovery with full details
+python oauth_tester.py discover \
+  --provider salesforce \
+  --client-id your-client-id \
+  --client-secret your-client-secret \
+  --instance-url test.salesforce.com \
   --verbose
 ```
 
 **What discovery shows you:**
-- Supported grant types (authorization_code, client_credentials, device_code)
-- Available scopes and endpoints
+- Supported grant types (authorization_code, client_credentials)
+- Available scopes and endpoints (when supported by provider)
 - PKCE support and authentication methods
-- **Live testing** of Client Credentials and Device Code flows
+- **Live testing** of Client Credentials flow
 - **Recommendations** for which flows to use
 
 ### 🤖 Client Credentials Flow (App-to-App)
 
 For backend services and automated processes that don't involve users:
 
+#### Microsoft
 ```bash
 # Basic usage with default scope
 python oauth_tester.py client-credentials \
@@ -68,141 +77,165 @@ python oauth_tester.py client-credentials \
   --client-id your-client-id \
   --client-secret your-client-secret \
   --scope "https://graph.microsoft.com/Sites.Read.All"
+```
+
+#### Salesforce
+```bash
+# Basic usage with default scope
+python oauth_tester.py client-credentials \
+  --provider salesforce \
+  --client-id your-client-id \
+  --client-secret your-client-secret
+
+# With custom instance (sandbox)
+python oauth_tester.py client-credentials \
+  --provider salesforce \
+  --client-id your-client-id \
+  --client-secret your-client-secret \
+  --instance-url test.salesforce.com \
+  --scope "api web"
 
 # With verbose output
 python oauth_tester.py client-credentials \
-  --provider microsoft \
-  --tenant-id your-tenant-id \
+  --provider salesforce \
   --client-id your-client-id \
   --client-secret your-client-secret \
-  --scope "https://graph.microsoft.com/.default" \
+  --scope "api" \
   --verbose
 ```
 
-**Client Credentials Notes:**
-- No user interaction required
-- Token represents your APPLICATION, not a user
-- Requires client secret (confidential client)
-- No refresh token provided (request new token when expired)
-- Perfect for server-to-server scenarios
+### 👤 Authorization Code Flow (User Login)
 
-### 🔐 Authorization Code Flow (User Login)
+For applications that need user authentication and consent:
 
+#### Microsoft
 ```bash
-# Basic usage
+# Basic user login flow
 python oauth_tester.py auth-code \
   --provider microsoft \
   --tenant-id your-tenant-id \
   --client-id your-client-id \
   --scope "https://graph.microsoft.com/Sites.Read.All offline_access"
 
-# With verbose output
+# With custom redirect URI
 python oauth_tester.py auth-code \
   --provider microsoft \
   --tenant-id your-tenant-id \
   --client-id your-client-id \
-  --scope "https://graph.microsoft.com/Sites.Read.All offline_access" \
-  --verbose
-
-# Custom redirect URI and port
-python oauth_tester.py auth-code \
-  --provider microsoft \
-  --tenant-id your-tenant-id \
-  --client-id your-client-id \
-  --scope "https://graph.microsoft.com/Sites.Read.All" \
+  --client-secret your-client-secret \
+  --scope "https://graph.microsoft.com/User.Read" \
   --redirect-uri "http://localhost:3000/callback" \
   --port 3000
+```
 
-# With client secret (confidential client)
+#### Salesforce
+```bash
+# Basic user login flow
 python oauth_tester.py auth-code \
+  --provider salesforce \
+  --client-id your-client-id \
+  --scope "api refresh_token"
+
+# With sandbox instance
+python oauth_tester.py auth-code \
+  --provider salesforce \
+  --client-id your-client-id \
+  --client-secret your-client-secret \
+  --instance-url test.salesforce.com \
+  --scope "api web refresh_token offline_access" \
+  --redirect-uri "http://localhost:8080/callback"
+```
+
+## Provider-Specific Notes
+
+### Microsoft Azure AD
+- **Tenant ID required** for all operations
+- Use `https://graph.microsoft.com/.default` for Client Credentials
+- Application permissions require admin consent
+- Access tokens are typically opaque (not JWT)
+- **Discovery endpoint available** with full OpenID Connect support
+
+### Salesforce
+- **Instance URL** defaults to `login.salesforce.com` (production)
+- Use `test.salesforce.com` for sandbox environments
+- Common scopes: `api`, `web`, `refresh_token`, `offline_access`
+- Access tokens are typically opaque
+- **Discovery endpoint** may not be available on all instances
+
+## Common Scopes
+
+### Microsoft Graph
+- `https://graph.microsoft.com/.default` - All granted permissions
+- `https://graph.microsoft.com/Sites.Read.All` - Read SharePoint sites
+- `https://graph.microsoft.com/User.Read` - Read user profile
+- `offline_access` - Refresh token access
+
+### Salesforce
+- `api` - Access to APIs
+- `web` - Web-based access
+- `refresh_token` - Refresh token access
+- `offline_access` - Offline access
+- `openid profile email` - OpenID Connect scopes
+
+## Troubleshooting
+
+### Microsoft Issues
+| Problem | Solution |
+|---------|----------|
+| "AADSTS70011: Invalid scope" | Use Microsoft Graph URLs, not SharePoint API |
+| "AADSTS65001: No permission" | Grant admin consent in Azure portal |
+| "AADSTS50194: Application not found" | Check Client ID and Tenant ID |
+
+### Salesforce Issues
+| Problem | Solution |
+|---------|----------|
+| "invalid_client_id" | Verify Connected App Client ID |
+| "invalid_grant" | Check Client Secret and instance URL |
+| "unsupported_grant_type" | Enable OAuth flows in Connected App |
+
+### General OAuth Issues
+| Problem | Solution |
+|---------|----------|
+| "Connection refused" | Check internet connection and firewall |
+| "SSL certificate verify failed" | Update certificates or use --verbose |
+| "Token expired" | Tokens are short-lived, get a new one |
+
+## Examples
+
+### Quick Microsoft Test
+```bash
+# Test if your Microsoft app works
+python oauth_tester.py client-credentials \
+  --provider microsoft \
+  --tenant-id abc123-def456 \
+  --client-id xyz789 \
+  --client-secret your-secret \
+  --verbose
+```
+
+### Quick Salesforce Test
+```bash
+# Test if your Salesforce Connected App works
+python oauth_tester.py client-credentials \
+  --provider salesforce \
+  --client-id your-consumer-key \
+  --client-secret your-consumer-secret \
+  --verbose
+```
+
+### Discovery Examples
+```bash
+# Discover Microsoft capabilities
+python oauth_tester.py discover \
   --provider microsoft \
   --tenant-id your-tenant-id \
   --client-id your-client-id \
-  --client-secret your-client-secret \
-  --scope "https://graph.microsoft.com/Sites.Read.All offline_access"
+  --client-secret your-client-secret
+
+# Discover Salesforce capabilities
+python oauth_tester.py discover \
+  --provider salesforce \
+  --client-id your-consumer-key \
+  --client-secret your-consumer-secret \
+  --instance-url login.salesforce.com
 ```
-
-### Common Microsoft Graph Scopes
-
-**For Client Credentials (.default recommended):**
-- `https://graph.microsoft.com/.default` - All permissions granted to the app
-- `https://graph.microsoft.com/Sites.Read.All` - Read SharePoint sites
-- `https://graph.microsoft.com/Sites.ReadWrite.All` - Read/write SharePoint sites
-- `https://graph.microsoft.com/Files.Read.All` - Read files
-- `https://graph.microsoft.com/Files.ReadWrite.All` - Read/write files
-
-**For Authorization Code (user context):**
-- `https://graph.microsoft.com/Sites.Read.All` - Read SharePoint sites
-- `https://graph.microsoft.com/Files.ReadWrite.All` - Read/write files
-- `https://graph.microsoft.com/User.Read` - Read user profile
-- `offline_access` - Get refresh tokens
-- `openid profile email` - Get ID token with user info
-
-## Azure App Registration Setup
-
-### For Authorization Code Flow:
-1. Go to Azure Portal > App Registrations
-2. Create new registration or use existing
-3. Add redirect URI: `http://localhost:8080/callback`
-4. Note the Application (client) ID and Directory (tenant) ID
-5. Configure API permissions for Microsoft Graph
-
-### For Client Credentials Flow:
-1. Same as above, but redirect URI not needed
-2. **Create a client secret** in "Certificates & secrets"
-3. **Grant admin consent** for application permissions
-4. Use **Application permissions** (not Delegated permissions)
-
-## Output
-
-The tool will:
-1. **Authorization Code**: Open browser, start callback server, exchange code for tokens
-2. **Client Credentials**: Direct token request (no user interaction)
-3. Display token information including:
-   - Token types (JWT vs opaque)
-   - Decoded JWT claims
-   - Expiration times
-   - Granted scopes
-
-## Troubleshooting
-
-- **Authorization Code**: Ensure redirect URI matches exactly in Azure app registration
-- **Client Credentials**: Ensure admin consent is granted for application permissions
-- Check that required scopes are granted in Azure
-- Use `--verbose` flag for detailed debugging output
-- Verify tenant ID and client ID are correct
-
-### Common Microsoft Graph Scopes
-
-- `https://graph.microsoft.com/Sites.Read.All` - Read SharePoint sites
-- `https://graph.microsoft.com/Files.ReadWrite.All` - Read/write files
-- `https://graph.microsoft.com/User.Read` - Read user profile
-- `offline_access` - Get refresh tokens
-- `openid profile email` - Get ID token with user info
-
-## Azure App Registration Setup
-
-1. Go to Azure Portal > App Registrations
-2. Create new registration or use existing
-3. Add redirect URI: `http://localhost:8080/callback`
-4. Note the Application (client) ID and Directory (tenant) ID
-5. Configure API permissions for Microsoft Graph
-
-## Output
-
-The tool will:
-1. Open your browser for authorization
-2. Start a local callback server
-3. Exchange authorization code for tokens
-4. Display token information including:
-   - Token types (JWT vs opaque)
-   - Decoded JWT claims
-   - Expiration times
-   - Granted scopes
-
-## Troubleshooting
-
-- Ensure redirect URI matches exactly in Azure app registration
-- Check that required scopes are granted in Azure
-- Use `--verbose` flag for detailed debugging output
-- Verify tenant ID and client ID are correct
