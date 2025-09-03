@@ -1,160 +1,100 @@
 # AgentCore Gateway Demos
 
-Connect AWS Bedrock Agent Core Gateway to Microsoft services using OAuth 2.0. Get AI agents reading SharePoint data in minutes.
+Connect AWS Bedrock Agent Core Gateway to enterprise services using OAuth 2.0. Get AI agents accessing your data in minutes.
 
 ## 🎯 What This Does
 
-Enables secure integration between AWS Bedrock agents and Microsoft services:
-- **OAuth 2.0 authentication** with Microsoft Graph API
-- **SharePoint access** for AI agents via Agent Core Gateway
+Enables secure integration between AWS Bedrock agents and enterprise services:
+- **OAuth 2.0 authentication** with multiple providers
+- **Enterprise data access** for AI agents via Agent Core Gateway
 - **Complete testing toolkit** with debugging tools
-- **Step-by-step setup** with visual guides
+- **Step-by-step setup guides** with visual instructions
 
-## 🚀 Quick Start: SharePoint Integration
+## 🚀 Integration Guides
 
-### Prerequisites
-- Microsoft Entra tenant with admin access
-- Python 3.12+
-- AWS Bedrock Agent Core Gateway
+### Available Integrations
 
-### Step 1: Register Microsoft Entra Application
+| Service | Status | Guide | Description |
+|---------|--------|-------|-------------|
+| **Microsoft SharePoint** | ✅ Ready | [SharePoint Quickstart](guides/sharepoint-quickstart.md) | Access SharePoint sites and documents |
+| **Salesforce** | 🚧 Coming Soon | [Salesforce Integration](salesforce/README.md) | Connect to Salesforce CRM data |
 
-1. **Create app registration** in Microsoft Entra Admin Center
-   - Name: Choose any friendly name
-   - Account types: "Accounts in this organizational directory only"
-   - **Note the Client ID** from the app registration overview
+### Getting Started
 
-![Register app](sharepoint/register_app.png)
+1. **Choose your integration** from the table above
+2. **Follow the quickstart guide** for step-by-step setup
+3. **Test with the included tools** to verify your configuration
+4. **Connect to Agent Core Gateway** for AI agent access
 
-2. **Create client secret** in Certificates & secrets section
-   - **Note the Client Secret** (copy immediately - it won't be shown again)
+## 🔧 Testing Tools
 
-3. **Add API permissions**: Microsoft Graph → Application permissions → **Sites.Read.All**
-
-![Grant permissions](sharepoint/add_permissions.png)
-
-4. **Grant admin consent** for the permission
-
-5. **Get Tenant ID** from the Entra admin center Home section
-
-![Find tenant ID](sharepoint/find_tenant_id.png)
-
-### Step 2: Test OAuth Flow (Optional)
-
-Verify your Entra setup works:
+### OAuth Tester (`/oauth-tester/`)
+Universal OAuth 2.0 testing toolkit:
+- **Authorization Code Flow** with PKCE support
+- **Client Credentials Flow** for app-to-app authentication
+- **OAuth Discovery** to detect supported capabilities
+- **JWT token analysis** and debugging
 
 ```bash
 cd oauth-tester
 pip install -r requirements.txt
 
+# Test Microsoft OAuth
 python oauth_tester.py client-credentials \
   --provider microsoft \
-  --tenant-id <your-tenant-id> \
-  --client-id <your-client-id> \
-  --client-secret <your-client-secret>
+  --tenant-id <tenant-id> \
+  --client-id <client-id> \
+  --client-secret <client-secret>
 ```
 
-**Expected result**: Access token with `"roles": ["Sites.Read.All"]`
+### Service-Specific Clients
+Each integration includes a dedicated API client for testing:
+- **SharePoint Client** (`/sharepoint/`) - Microsoft Graph API integration
+- **Salesforce Client** (coming soon) - Salesforce REST API integration
 
-### Step 3: Test SharePoint Access (Optional)
+## 📚 Documentation
 
-```bash
-cd sharepoint
-
-# Verify token works
-python sharepoint_client.py --token <access-token> --action test-token
-
-# List your SharePoint sites  
-python sharepoint_client.py --token <access-token> --action list-sites
-```
-
-### Step 4: Configure Agent Core Gateway
-
-1. **Add OAuth client** in AgentCore Identity with your Entra credentials:
-
-![OAuth client](sharepoint/oauth_client_setup.png)
-
-2. **Add SharePoint target** in Agent Core Gateway:
-
-![Add target for sharepoint](sharepoint/add_target_sharepoint.png)
-
-> **Need help creating a gateway?** See [Creating your Gateway](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/create-gateway-methods.html)
-
-### Step 5: Get Cognito Access Token
-
-Agent Core Gateway uses Cognito for inbound authentication. Get the token:
-
-1. **Find token endpoint** from your gateway's discovery URL:
-   ```
-   https://xxxxxxxxxxxx.auth.ap-southeast-2.amazoncognito.com/oauth2/token
-   ```
-
-2. **Find Cognito user pool ID** from the same discovery URL:
-
-![Find the user pool ID](find_user_pool_id.png)
-
-3. **Navigate to Cognito** and find your user pool:
-
-![Navigate to Cognito user pool](find_user_pool.png)
-
-4. **Get client credentials** from App Clients section:
-
-![Obtain client credentials](cognito_client_credentials.png)
-
-5. **Request access token**:
-   ```bash
-   curl -X POST YOUR_TOKEN_ENDPOINT \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET"
-   ```
-
-### Step 6: Test with MCP Inspector
-
-1. **Start MCP Inspector**:
-   ```bash
-   npx @modelcontextprotocol/inspector
-   ```
-
-2. **Connect to your gateway**:
-   - Transport: "Streamable HTTP"
-   - URL: Your Gateway resource URL
-   - Bearer Token: Cognito access token from Step 5
-
-3. **Test SharePoint tools**:
-   - Click "List Tools" → Should show `getSite`, `addSheet`, etc.
-   - Get site ID from SharePoint client: `python sharepoint_client.py --token <token> --action list-sites`
-   - Test `getSite` with your site ID
-
-![MCP Inspector](mcp_inspector.png)
-
-**Success!** Your AI agents can now access SharePoint data:
-
-![List sites](list_sites.png)
+- **[OAuth Flows Reference](oauth-cheatsheet.md)** - Complete OAuth 2.0 guide
+- **[Integration Guides](guides/)** - Step-by-step setup instructions
+- **Service READMEs** - Detailed documentation for each integration
 
 ## 🔧 Troubleshooting
 
-### OAuth Issues
+### Common OAuth Issues
 | Problem | Solution |
 |---------|----------|
-| "Permission denied" | Use **Microsoft Graph** permissions, not SharePoint API |
-| "Invalid scope" | Use `.default` scope for Client Credentials |
+| "Permission denied" | Check API permissions in provider console |
+| "Invalid scope" | Use provider-specific scope format |
 | "Unauthorized" | Ensure admin consent is granted |
-| "No roles in token" | Wait 5-10 minutes after granting consent |
+| "Token expired" | Check token expiration and refresh logic |
 
 ### Quick Diagnostics
-- **Check JWT token**: Look for `"roles": ["Sites.Read.All"]` field
-- **Use verbose mode**: Add `--verbose` flag to commands
-- **Verify permissions**: Check Azure portal for green checkmarks
+- **Use verbose mode**: Add `--verbose` flag to all commands
+- **Check token contents**: JWT tokens show permissions and expiration
+- **Verify endpoints**: Use OAuth discovery to confirm configuration
 
-## 📁 What's Included
+## 📁 Repository Structure
 
 ```
-├── oauth-tester/           # OAuth 2.0 testing toolkit
-├── sharepoint/            # SharePoint API client  
-└── oauth-cheatsheet.md    # OAuth flows reference
+├── guides/                 # Integration quickstart guides
+├── oauth-tester/          # Universal OAuth 2.0 testing toolkit
+├── sharepoint/           # SharePoint-specific tools and screenshots
+├── salesforce/           # Salesforce integration (coming soon)
+└── oauth-cheatsheet.md   # OAuth flows reference guide
 ```
 
-Each folder has its own README with detailed usage instructions.
+## 🤝 Contributing
 
+To add a new integration:
 
+1. Create a new folder for your service (e.g., `/servicename/`)
+2. Add a quickstart guide in `/guides/servicename-quickstart.md`
+3. Include testing tools and API clients
+4. Add screenshots for setup steps
+5. Update this README with your integration
 
+Each integration should follow the established pattern:
+- OAuth provider setup
+- Testing and validation tools
+- Agent Core Gateway configuration
+- End-to-end MCP testing
